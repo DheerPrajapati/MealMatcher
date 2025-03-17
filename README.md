@@ -10,7 +10,6 @@ Run
 To run the application do
 `npm run dev`
 
-`
     meal-matcher/
     ├── src/
     │   ├── app/
@@ -34,4 +33,3 @@ To run the application do
     │   │   └── page.js                      # landing page
     │   ├── components/
     │   │   ├── RestaurantCard.js            # component that displays the given resturant
-`
