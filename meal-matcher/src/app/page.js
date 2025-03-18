@@ -1,17 +1,12 @@
 // import Image from "next/image";
-
+import LandingPage from "./Component/LandingPage";
 import Link from "next/link";
 
 export default function Home() {
 
   return (
     <div>
-      <div>Meal Matcher</div>
-      <Link href={'/login'}>
-        <button  className="flex justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-          Get Started!
-        </button>
-      </Link>
+      <LandingPage />
     </div>
   );
 }
