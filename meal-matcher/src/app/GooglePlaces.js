@@ -1,6 +1,6 @@
 class GooglePlaces {
-    constructor(apiKey) {
-        this.apiKey = apiKey;
+    constructor() {
+        this.apiKey = "AIzaSyAn5SkZLs8BiORKyWW7IAnfagAzLYZAn-s";
         this.baseUrl = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
     }
 
