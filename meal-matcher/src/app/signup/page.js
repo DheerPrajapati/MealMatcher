@@ -1,3 +1,5 @@
+import { options } from "../api/auth/[...nextauth]/options";
+
 export default function SignUp() {
   return (
     <>

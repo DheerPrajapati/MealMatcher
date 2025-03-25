@@ -19,12 +19,12 @@ export const options = {
                 username: {
                     label: "Username:",
                     type: "text", 
-                    placeholder: "Your username"
+                    placeholder: "Enter Username"
                 }, 
                 password: {
                     label: "Password", 
                     type: "text", 
-                    placeholder: "Your password"
+                    placeholder: "Enter Password"
                 }
             }, 
             async authorize(credentials) {
