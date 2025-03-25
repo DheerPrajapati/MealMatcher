@@ -1,3 +1,4 @@
+// ChatGPT assisted in the creation of this
 class GooglePlaces {
     constructor() {
         this.apiKey = "AIzaSyAn5SkZLs8BiORKyWW7IAnfagAzLYZAn-s";
@@ -50,7 +51,3 @@ class GooglePlaces {
         }
     }
 }
-
-// Usage Example:
-const places = new GooglePlaces("YOUR_GOOGLE_API_KEY");
-places.findRestaurants(5).then(restaurants => console.log(restaurants));
