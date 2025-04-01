@@ -1,3 +1,4 @@
+// From tutorial --> https://www.youtube.com/watch?v=w2h54xz6Ndw&t=2062s&ab_channel=DaveGray
 
 import NextAuth from 'next-auth';
 import { options } from './options';
