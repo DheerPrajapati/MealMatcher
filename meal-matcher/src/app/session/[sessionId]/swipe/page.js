@@ -1,45 +1,38 @@
-"use client"; // Ensure this is a client component
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import RestaurantCard from "@/app/Component/RestaurantCard";
 
+// Simple helpers
+function getSessionFromStorage(sessionId) {
+  const data = localStorage.getItem(`session_${sessionId}`);
+  return data ? JSON.parse(data) : null;
+}
+
 export default function SwipePage() {
+  const { sessionId } = useParams();
   const router = useRouter();
 
-  // For demonstration, we assume the session ID was set on session creation
-  const sessionId = localStorage.getItem("sessionId") || "demo123";
-
-  // Example list of restaurants – replace with dynamic data later
-  const initialRestaurants = [
-    {
-      id: 1,
-      name: "Pizza Heaven",
-      description: "Delicious NY-style pizza",
-      imageUrl: "/pizza.jpg", // Update with a valid image path
-    },
-    {
-      id: 2,
-      name: "Sushi World",
-      description: "Fresh sushi and sashimi",
-      imageUrl: "/sushi.jpg",
-    },
-    {
-      id: 3,
-      name: "Burger Joint",
-      description: "Best burgers in town",
-      imageUrl: "/burger.jpg",
-    },
-  ];
-
-  const [restaurants, setRestaurants] = useState(initialRestaurants);
-  const [swiped, setSwiped] = useState([]); // Store swipe decisions of the current user
+  const [restaurants, setRestaurants] = useState([]);
+  const [swiped, setSwiped] = useState([]); 
   const [forcedSwipe, setForcedSwipe] = useState(null);
 
+  // 1) Load restaurants from the session
+  useEffect(() => {
+    if (!sessionId) return;
+    const sessionData = getSessionFromStorage(sessionId);
+    if (sessionData && sessionData.restaurants) {
+      setRestaurants(sessionData.restaurants);
+    }
+  }, [sessionId]);
+
+  // 2) Handle user swipes
   const handleSwipe = (direction, restaurant) => {
     console.log(`Swiped ${direction} on ${restaurant.name}`);
-    // Remove the swiped restaurant from the list
+    // Remove from the deck
     setRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
-    // Record the swipe decision for the current user
+    // Record the swipe
     setSwiped((prev) => [...prev, { ...restaurant, direction }]);
     if (forcedSwipe) setForcedSwipe(null);
   };
@@ -50,14 +43,13 @@ export default function SwipePage() {
     }
   };
 
-  // When the user clicks "Done", store their swipe results for the session and navigate to the results page.
+  // 3) Clicking "Done" => store results in localStorage => show results
   const handleDone = () => {
-    // Retrieve any existing results for this session
     const key = `swipeResults_${sessionId}`;
     const existingResults = JSON.parse(localStorage.getItem(key)) || [];
-    // For demo, we simply append the current user's swiped results to the session data.
+    // Add this user's swipes
     localStorage.setItem(key, JSON.stringify([...existingResults, swiped]));
-    // Navigate to the results page
+    // Navigate to results
     router.push(`/session/${sessionId}/results`);
   };
 
@@ -75,6 +67,8 @@ export default function SwipePage() {
             forceSwipe={index === 0 ? forcedSwipe : null}
           />
         ))}
+
+        {/* If no more restaurants */}
         {restaurants.length === 0 && (
           <div className="flex h-full items-center justify-center">
             <p className="text-xl text-gray-700">No more restaurants to swipe.</p>
@@ -82,19 +76,21 @@ export default function SwipePage() {
         )}
       </div>
 
-      {/* Action buttons for swipe */}
+      {/* Swipe controls (optional) */}
       <div className="mt-6 flex justify-center gap-8">
         <button
           onClick={() => handleForceSwipe("left")}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600 focus:outline-none"
+          className="flex h-12 w-12 items-center justify-center rounded-full 
+            bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600 focus:outline-none"
         >
           ✕
         </button>
         <button
           onClick={() => handleForceSwipe("right")}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600 focus:outline-none"
+          className="flex h-12 w-12 items-center justify-center rounded-full 
+            bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600 focus:outline-none"
         >
-          {/* Check mark SVG */}
+          {/* Check mark icon */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6"
@@ -107,7 +103,6 @@ export default function SwipePage() {
         </button>
       </div>
 
-      {/* "Done" button to finish swiping */}
       <div className="mt-6">
         <button
           onClick={handleDone}
