@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
+
 export default async function registerUser(formData) {
     try {
         const firstName = formData.get("first_name");
