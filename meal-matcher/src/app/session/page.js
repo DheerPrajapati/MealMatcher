@@ -6,11 +6,27 @@ import { useRouter } from "next/navigation";
 export default function SessionHome() {
   const router = useRouter();
 
-  const createSession = () => {
-    // Generate a random 6-char session ID
-    const sessionId = Math.random().toString(36).substring(2, 8);
-    // Redirect to the dynamic route
-    router.push(`/session/${sessionId}`);
+  const createSession = async () => {
+    try {
+      const response = await fetch("/api/decision-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "My New Session",   // optional
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to create session");
+      }
+      const newSession = await response.json();
+      // newSession => { id: <number>, name: "...", status: "VOTING", ... }
+
+      // Redirect to /session/[sessionId]
+      router.push(`/session/${newSession.id}`);
+    } catch (error) {
+      console.error("Error creating session:", error);
+      alert("Failed to create session");
+    }
   };
 
   return (
