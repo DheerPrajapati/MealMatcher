@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,12 +8,109 @@ datasource db {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  first_name   String
-  last_name    String
-  username     String   @unique
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  id              Int               @id @default(autoincrement())
+  first_name      String
+  last_name       String
+  username        String            @unique
+  email           String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+  groups          GroupMembership[]
+  ownedGroups     Group[]
+  restaurantVotes RestaurantVote[]
+}
+
+model Group {
+  id        Int               @id @default(autoincrement())
+  name      String
+  maxSize   Int
+  isActive  Boolean           @default(true)
+  code      String            @unique // For easy joining
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+  ownerId   Int
+  owner     User              @relation(fields: [ownerId], references: [id])
+  members   GroupMembership[]
+  sessions  DecisionSession[]
+}
+
+model GroupMembership {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  groupId  Int
+  joinedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model Restaurant {
+  id           Int              @id @default(autoincrement())
+  name         String
+  description  String?
+  imageUrl     String?
+  cuisine      String?
+  priceRange   String? // $ to $$$$
+  address      String?
+  city         String?
+  state        String?
+  zipCode      String?
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
+  votes        RestaurantVote[]
+  sessionItems SessionItem[]
+}
+
+model DecisionSession {
+  id                  Int           @id @default(autoincrement())
+  groupId             Int
+  name                String?
+  status              SessionStatus @default(VOTING)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @default(now()) @updatedAt
+  expiresAt           DateTime?
+  winningRestaurantId Int?
+  group               Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sessionItems        SessionItem[]
+}
+
+model SessionItem {
+  id           Int              @id @default(autoincrement())
+  sessionId    Int
+  restaurantId Int
+  score        Float            @default(0)
+  session      DecisionSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id])
+  votes        RestaurantVote[]
+
+  @@unique([sessionId, restaurantId])
+}
+
+model RestaurantVote {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  sessionItemId Int
+  vote          Vote
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionItem   SessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  restaurantId  Int
+
+  @@unique([userId, sessionItemId])
+}
+
+enum SessionStatus {
+  VOTING
+  COMPLETED
+  EXPIRED
+}
+
+enum Vote {
+  LIKE
+  DISLIKE
 }
