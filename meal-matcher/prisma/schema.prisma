@@ -17,7 +17,7 @@ model User {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now()) @updatedAt
 
-  // Each user can have many RestaurantVotes
+  // Optional: Each user can have many RestaurantVotes, but in some cases you may not use it
   restaurantVotes RestaurantVote[]
 }
 
@@ -38,12 +38,11 @@ model DecisionSessionParticipant {
   id        Int             @id @default(autoincrement())
   name      String
   done      Boolean         @default(false)
-  isHost    Boolean         @default(false)  // <-- Add this line
+  isHost    Boolean         @default(false)
 
   sessionId Int
   session   DecisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
-
 
 model Restaurant {
   id           Int              @id @default(autoincrement())
@@ -53,7 +52,7 @@ model Restaurant {
   // SessionItems referencing this Restaurant
   sessionItems SessionItem[]
   
-  // Add the opposite relation for RestaurantVote
+  // Votes referencing this Restaurant
   restaurantVotes RestaurantVote[]
 }
 
@@ -72,29 +71,32 @@ model SessionItem {
 }
 
 model RestaurantVote {
-  id            Int            @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
 
-  // Link to the user who voted
-  userId        Int
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tie to a participantName for this session
+  participantName String
 
-  // Link to the session item
-  sessionItemId Int
-  sessionItem   SessionItem    @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+  // Optionally link to a real user if you want
+  userId         Int?
+  user           User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Link to the restaurant
-  restaurantId  Int
-  restaurant    Restaurant     @relation(fields: [restaurantId], references: [id])
+  sessionItemId  Int
+  sessionItem    SessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+
+  restaurantId   Int
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
   
-  vote          Vote
-  createdAt     DateTime       @default(now())
+  vote           Vote
+  createdAt      DateTime    @default(now())
 
-  @@unique([userId, sessionItemId])
+  // Unique constraint so participantName can only vote once per sessionItem
+  @@unique([sessionItemId, participantName])
 }
 
 // Enums
 enum SessionStatus {
   VOTING
+  SWIPING
   COMPLETED
   EXPIRED
 }

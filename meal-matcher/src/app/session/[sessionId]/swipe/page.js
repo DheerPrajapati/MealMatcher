@@ -4,10 +4,30 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RestaurantCard from "@/app/Component/RestaurantCard";
 
-// Simple helpers
-function getSessionFromStorage(sessionId) {
-  const data = localStorage.getItem(`session_${sessionId}`);
-  return data ? JSON.parse(data) : null;
+// Helper to fetch the items that the user hasn't swiped
+async function fetchSwipeData(sessionId, participantName) {
+  const res = await fetch(`/api/decision-sessions/${sessionId}/swipe?participantName=${encodeURIComponent(participantName)}`);
+  if (!res.ok) {
+    console.error("Failed to fetch swipe data");
+    return [];
+  }
+  return await res.json(); // array of { sessionItemId, name, description, ...}
+}
+
+// Helper to record a swipe
+async function recordSwipe(sessionId, participantName, sessionItemId, vote) {
+  const res = await fetch(`/api/decision-sessions/${sessionId}/swipe`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      participantName,
+      sessionItemId,
+      vote, // "LIKE" or "DISLIKE"
+    }),
+  });
+  if (!res.ok) {
+    console.error("Failed to record swipe");
+  }
 }
 
 export default function SwipePage() {
@@ -15,25 +35,42 @@ export default function SwipePage() {
   const router = useRouter();
 
   const [restaurants, setRestaurants] = useState([]);
-  const [swiped, setSwiped] = useState([]); 
   const [forcedSwipe, setForcedSwipe] = useState(null);
+  const [participantName, setParticipantName] = useState(null);
 
-  // 1) Load restaurants from the session
+  // On mount, we read the participant from sessionStorage or prompt
   useEffect(() => {
     if (!sessionId) return;
-    const sessionData = getSessionFromStorage(sessionId);
-    if (sessionData && sessionData.restaurants) {
-      setRestaurants(sessionData.restaurants);
+    const localKey = `session_user_${sessionId}`;
+    let userStr = sessionStorage.getItem(localKey);
+    if (!userStr) {
+      // If somehow they're accessing /swipe directly, prompt?
+      const name = prompt("Enter your participant name:") || "Anonymous";
+      userStr = JSON.stringify({ name, done: false });
+      sessionStorage.setItem(localKey, userStr);
     }
+    const user = JSON.parse(userStr);
+    setParticipantName(user.name);
   }, [sessionId]);
 
-  // 2) Handle user swipes
-  const handleSwipe = (direction, restaurant) => {
+  // Once we have participantName, load the items
+  useEffect(() => {
+    if (!sessionId || !participantName) return;
+    (async () => {
+      const data = await fetchSwipeData(sessionId, participantName);
+      setRestaurants(data);
+    })();
+  }, [sessionId, participantName]);
+
+  // Swiping logic
+  const handleSwipe = async (direction, restaurant) => {
     console.log(`Swiped ${direction} on ${restaurant.name}`);
-    // Remove from the deck
-    setRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
-    // Record the swipe
-    setSwiped((prev) => [...prev, { ...restaurant, direction }]);
+    // Remove from local deck
+    setRestaurants((prev) => prev.filter((r) => r.sessionItemId !== restaurant.sessionItemId));
+    // Record the swipe in DB
+    const vote = direction === "right" ? "LIKE" : "DISLIKE";
+    await recordSwipe(sessionId, participantName, restaurant.sessionItemId, vote);
+
     if (forcedSwipe) setForcedSwipe(null);
   };
 
@@ -43,14 +80,35 @@ export default function SwipePage() {
     }
   };
 
-  // 3) Clicking "Done" => store results in localStorage => show results
-  const handleDone = () => {
-    const key = `swipeResults_${sessionId}`;
-    const existingResults = JSON.parse(localStorage.getItem(key)) || [];
-    // Add this user's swipes
-    localStorage.setItem(key, JSON.stringify([...existingResults, swiped]));
-    // Navigate to results
-    router.push(`/session/${sessionId}/results`);
+  const handleDone = async () => {
+    // Mark ourselves as done. We'll do a quick "PUT" to the session to set done = true
+    try {
+      // fetch the session
+      const sessionRes = await fetch(`/api/decision-sessions/${sessionId}`);
+      if (!sessionRes.ok) {
+        throw new Error("Cannot load session for done status");
+      }
+      const session = await sessionRes.json();
+      // find ourselves
+      const participants = session.participants.map((p) => {
+        if (p.name === participantName) {
+          return { ...p, done: true };
+        }
+        return p;
+      });
+
+      // Update session
+      await fetch(`/api/decision-sessions/${sessionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participants }),
+      });
+
+      // Go to results
+      router.push(`/session/${sessionId}/results`);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -60,7 +118,7 @@ export default function SwipePage() {
       <div className="relative w-full max-w-sm h-96">
         {restaurants.map((restaurant, index) => (
           <RestaurantCard
-            key={restaurant.id}
+            key={restaurant.sessionItemId}
             restaurant={restaurant}
             onSwipe={handleSwipe}
             style={{ zIndex: restaurants.length - index }}
@@ -68,7 +126,6 @@ export default function SwipePage() {
           />
         ))}
 
-        {/* If no more restaurants */}
         {restaurants.length === 0 && (
           <div className="flex h-full items-center justify-center">
             <p className="text-xl text-gray-700">No more restaurants to swipe.</p>
@@ -76,7 +133,6 @@ export default function SwipePage() {
         )}
       </div>
 
-      {/* Swipe controls (optional) */}
       <div className="mt-6 flex justify-center gap-8">
         <button
           onClick={() => handleForceSwipe("left")}
@@ -103,14 +159,12 @@ export default function SwipePage() {
         </button>
       </div>
 
-      <div className="mt-6">
-        <button
-          onClick={handleDone}
-          className="rounded bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700"
-        >
-          Done
-        </button>
-      </div>
+      <button
+        onClick={handleDone}
+        className="mt-6 rounded bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700"
+      >
+        Done
+      </button>
     </div>
   );
 }

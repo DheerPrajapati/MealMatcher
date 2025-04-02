@@ -1,52 +1,53 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 
-export default function SessionResults() {
+export default function SessionResultsPage() {
   const { sessionId } = useParams();
-  const [results, setResults] = useState([]);
+  const router = useRouter();
+  const [sessionData, setSessionData] = useState(null);
 
   useEffect(() => {
-    const key = `swipeResults_${sessionId}`;
-    const data = localStorage.getItem(key);
-    if (data) {
-      setResults(JSON.parse(data));
-    }
+    if (!sessionId) return;
+    (async () => {
+      const res = await fetch(`/api/decision-sessions/${sessionId}`);
+      if (!res.ok) {
+        alert("Session not found");
+        return;
+      }
+      const data = await res.json();
+      setSessionData(data);
+    })();
   }, [sessionId]);
+
+  if (!sessionData) {
+    return <div className="p-6">Loading results...</div>;
+  }
+
+  // Sort sessionItems by descending score
+  const sortedItems = [...sessionData.sessionItems].sort((a, b) => b.score - a.score);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="mb-4 text-3xl font-bold text-gray-800">
-        Results for Session: {sessionId}
-      </h1>
-
-      {results.length === 0 ? (
-        <p className="text-xl text-gray-700">No swipe data available yet.</p>
-      ) : (
-        results.map((userSwipes, index) => (
-          <div key={index} className="mb-6 rounded bg-white p-4 shadow">
-            <h2 className="mb-2 text-xl font-bold">User {index + 1}</h2>
-            <ul className="space-y-2">
-              {userSwipes.map((swipe, i) => (
-                <li key={i} className="border-b py-2">
-                  <span className="font-semibold">{swipe.name}</span> — swiped{" "}
-                  <span className="capitalize">{swipe.direction}</span>
-                </li>
-              ))}
-            </ul>
+      <h1 className="text-3xl font-bold mb-4">Results for Session {sessionId}</h1>
+      <div className="bg-white p-4 rounded shadow">
+        {sortedItems.map((item) => (
+          <div key={item.id} className="border-b py-2">
+            <strong className="block text-lg">{item.restaurant?.name}</strong>
+            <p className="text-gray-700">
+              Score: {item.score} 
+            </p>
           </div>
-        ))
-      )}
+        ))}
+      </div>
 
-      <Link
-        href="/session"
-        className="mt-6 inline-block rounded bg-indigo-600 px-4 py-2 text-white shadow 
-          hover:bg-indigo-700"
+      <button
+        onClick={() => router.push(`/session`)}
+        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
-        Back to Session Home
-      </Link>
+        Back to Sessions
+      </button>
     </div>
   );
 }
