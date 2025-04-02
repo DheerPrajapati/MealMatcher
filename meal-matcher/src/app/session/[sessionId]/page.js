@@ -180,12 +180,16 @@ export default function SessionPage() {
         <h2 className="text-xl font-semibold mb-2">Restaurants</h2>
         {sessionData.sessionItems?.length ? (
           <ul>
-            {sessionData.sessionItems.map((item) => (
-              <li key={item.id}>
-                ID {item.id} {'=>'} Restaurant {item.restaurantId}
+          {sessionData.sessionItems.map((item) => {
+            const { name, description } = item.restaurant; // pulled from the included relation
+            return (
+              <li key={item.id} className="mb-2">
+                <strong className="block text-lg">{name}</strong>
+                <span className="text-gray-700">{description || "(no description)"}</span>
               </li>
-            ))}
-          </ul>
+            );
+          })}
+        </ul>        
         ) : (
           <p>No restaurants yet.</p>
         )}

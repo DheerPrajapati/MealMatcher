@@ -16,94 +16,83 @@ model User {
   passwordHash    String
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @default(now()) @updatedAt
-  groups          GroupMembership[]
-  ownedGroups     Group[]
+
+  // Each user can have many RestaurantVotes
   restaurantVotes RestaurantVote[]
-}
-
-model Group {
-  id        Int               @id @default(autoincrement())
-  name      String
-  maxSize   Int
-  isActive  Boolean           @default(true)
-  code      String            @unique // For easy joining
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @default(now()) @updatedAt
-  ownerId   Int
-  owner     User              @relation(fields: [ownerId], references: [id])
-  members   GroupMembership[]
-  sessions  DecisionSession[]
-}
-
-model GroupMembership {
-  id       Int      @id @default(autoincrement())
-  userId   Int
-  groupId  Int
-  joinedAt DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, groupId])
-}
-
-model Restaurant {
-  id           Int              @id @default(autoincrement())
-  name         String
-  description  String?
-  imageUrl     String?
-  cuisine      String?
-  priceRange   String? // $ to $$$$
-  address      String?
-  city         String?
-  state        String?
-  zipCode      String?
-  latitude     Float?
-  longitude    Float?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @default(now()) @updatedAt
-  votes        RestaurantVote[]
-  sessionItems SessionItem[]
 }
 
 model DecisionSession {
   id                  Int           @id @default(autoincrement())
-  groupId             Int
   name                String?
   status              SessionStatus @default(VOTING)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @default(now()) @updatedAt
   expiresAt           DateTime?
   winningRestaurantId Int?
-  group               Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  participants        DecisionSessionParticipant[]
   sessionItems        SessionItem[]
 }
 
-model SessionItem {
+model DecisionSessionParticipant {
+  id        Int             @id @default(autoincrement())
+  name      String
+  done      Boolean         @default(false)
+  isHost    Boolean         @default(false)  // <-- Add this line
+
+  sessionId Int
+  session   DecisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+
+model Restaurant {
   id           Int              @id @default(autoincrement())
+  name         String
+  description  String?
+
+  // SessionItems referencing this Restaurant
+  sessionItems SessionItem[]
+  
+  // Add the opposite relation for RestaurantVote
+  restaurantVotes RestaurantVote[]
+}
+
+model SessionItem {
+  id           Int             @id @default(autoincrement())
   sessionId    Int
   restaurantId Int
-  score        Float            @default(0)
-  session      DecisionSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id])
-  votes        RestaurantVote[]
+  score        Float           @default(0)
 
+  session      DecisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  
+  votes        RestaurantVote[]
+  
   @@unique([sessionId, restaurantId])
 }
 
 model RestaurantVote {
-  id            Int         @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
+
+  // Link to the user who voted
   userId        Int
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Link to the session item
   sessionItemId Int
-  vote          Vote
-  createdAt     DateTime    @default(now())
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionItem   SessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
-  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  sessionItem   SessionItem    @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+
+  // Link to the restaurant
   restaurantId  Int
+  restaurant    Restaurant     @relation(fields: [restaurantId], references: [id])
+  
+  vote          Vote
+  createdAt     DateTime       @default(now())
 
   @@unique([userId, sessionItemId])
 }
 
+// Enums
 enum SessionStatus {
   VOTING
   COMPLETED

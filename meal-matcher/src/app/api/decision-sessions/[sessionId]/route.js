@@ -13,8 +13,12 @@ export async function GET(request, { params }) {
   const session = await prisma.decisionSession.findUnique({
     where: { id },
     include: {
-      participants: true, 
-      sessionItems: true,
+      participants: true,
+      sessionItems: {
+        include: {
+          restaurant: true, 
+        },
+      },
     },
   });
 
