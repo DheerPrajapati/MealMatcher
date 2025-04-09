@@ -13,20 +13,20 @@ export default function SwipePage() {
   const initialRestaurants = [
     {
       id: 1,
-      name: "Pizza Heaven",
-      description: "Delicious NY-style pizza",
+      name: "Italian",
+      description: "pizza",
       imageUrl: "/pizza.jpg", // Update with a valid image path
     },
     {
       id: 2,
-      name: "Sushi World",
-      description: "Fresh sushi and sashimi",
+      name: "Japanese",
+      description: "sushi",
       imageUrl: "/sushi.jpg",
     },
     {
       id: 3,
-      name: "Burger Joint",
-      description: "Best burgers in town",
+      name: "Burger",
+      description: "burger",
       imageUrl: "/burger.jpg",
     },
   ];
