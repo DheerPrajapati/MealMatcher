@@ -1,5 +1,5 @@
-"use client"; // Ensure this is a client component
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import RestaurantCard from "@/app/Component/RestaurantCard";
 
@@ -7,33 +7,52 @@ export default function SwipePage() {
   const router = useRouter();
 
   // For demonstration, we assume the session ID was set on session creation
-  const sessionId = localStorage.getItem("sessionId") || "demo123";
+  let sessionId = "demo123";
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("sessionId");
+    if (stored) sessionId = stored;
+  }
 
-  // Example list of restaurants – replace with dynamic data later
-  const initialRestaurants = [
-    {
-      id: 1,
-      name: "Pizza Heaven",
-      description: "Delicious NY-style pizza",
-      imageUrl: "/pizza.jpg", // Update with a valid image path
-    },
-    {
-      id: 2,
-      name: "Sushi World",
-      description: "Fresh sushi and sashimi",
-      imageUrl: "/sushi.jpg",
-    },
-    {
-      id: 3,
-      name: "Burger Joint",
-      description: "Best burgers in town",
-      imageUrl: "/burger.jpg",
-    },
-  ];
-
-  const [restaurants, setRestaurants] = useState(initialRestaurants);
+  const [restaurants, setRestaurants] = useState([]);
   const [swiped, setSwiped] = useState([]); // Store swipe decisions of the current user
   const [forcedSwipe, setForcedSwipe] = useState(null);
+
+  
+  useEffect(() =>{
+    if (navigator.geolocation == false){
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+
+      async (position) => {
+        const {latitude, longitude} = position.coords;
+        try{
+          const res = await fetch(`/api/places?lat=${latitude}&lng=${longitude}`);
+          const data = await res.json();
+
+          console.log(data.results);
+  
+          const formatted_names = data.results.map((place) => ({
+            id: place.place_id,
+            name: place.name,
+            description: place.vicinity,
+            rating: place.rating || "No Rating",
+            open: place.open_now,
+            price_lvl: place.price_level == 1 ? "$" : place.price_level == 2 ? "$$" : place.price_level == 3 ? "$$$" : place.price_level == 4 ? "$$$$" : "N/A",
+            isOpen: place.opening_hours?.open_now ?? null,
+            user_total_rating: place.user_ratings_total || "0",
+            imageUrl: place.photos
+              ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`
+              : "/default.jpg",
+          }));
+  
+          setRestaurants(formatted_names);
+        } catch(err){
+          console.log("Error formatting api data")
+        }
+      }
+    );
+  }, []);
 
   const handleSwipe = (direction, restaurant) => {
     console.log(`Swiped ${direction} on ${restaurant.name}`);
