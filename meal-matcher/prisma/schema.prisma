@@ -8,12 +8,100 @@ datasource db {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  first_name   String
-  last_name    String
-  username     String   @unique
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  id              Int               @id @default(autoincrement())
+  first_name      String
+  last_name       String
+  username        String            @unique
+  email           String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+
+  // Optional: Each user can have many RestaurantVotes, but in some cases you may not use it
+  restaurantVotes RestaurantVote[]
+}
+
+model DecisionSession {
+  id                  Int           @id @default(autoincrement())
+  name                String?
+  status              SessionStatus @default(VOTING)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @default(now()) @updatedAt
+  expiresAt           DateTime?
+  winningRestaurantId Int?
+
+  participants        DecisionSessionParticipant[]
+  sessionItems        SessionItem[]
+}
+
+model DecisionSessionParticipant {
+  id        Int             @id @default(autoincrement())
+  name      String
+  done      Boolean         @default(false)
+  isHost    Boolean         @default(false)
+
+  sessionId Int
+  session   DecisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Restaurant {
+  id           Int              @id @default(autoincrement())
+  name         String
+  description  String?
+
+  // SessionItems referencing this Restaurant
+  sessionItems SessionItem[]
+  
+  // Votes referencing this Restaurant
+  restaurantVotes RestaurantVote[]
+}
+
+model SessionItem {
+  id           Int             @id @default(autoincrement())
+  sessionId    Int
+  restaurantId Int
+  score        Float           @default(0)
+
+  session      DecisionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  
+  votes        RestaurantVote[]
+  
+  @@unique([sessionId, restaurantId])
+}
+
+model RestaurantVote {
+  id             Int         @id @default(autoincrement())
+
+  // Tie to a participantName for this session
+  participantName String
+
+  // Optionally link to a real user if you want
+  userId         Int?
+  user           User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sessionItemId  Int
+  sessionItem    SessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+
+  restaurantId   Int
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
+  
+  vote           Vote
+  createdAt      DateTime    @default(now())
+
+  // Unique constraint so participantName can only vote once per sessionItem
+  @@unique([sessionItemId, participantName])
+}
+
+// Enums
+enum SessionStatus {
+  VOTING
+  SWIPING
+  COMPLETED
+  EXPIRED
+}
+
+enum Vote {
+  LIKE
+  DISLIKE
 }
