@@ -35,12 +35,48 @@ export default function SwipePage() {
   const [swiped, setSwiped] = useState([]); // Store swipe decisions of the current user
   const [forcedSwipe, setForcedSwipe] = useState(null);
 
-  const handleSwipe = (direction, restaurant) => {
+  const handleSwipe = async (direction, restaurant) => {
     console.log(`Swiped ${direction} on ${restaurant.name}`);
     // Remove the swiped restaurant from the list
     setRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
     // Record the swipe decision for the current user
     setSwiped((prev) => [...prev, { ...restaurant, direction }]);
+
+      // Send a "LIKE" vote to the backend
+      console.log("The direction is right");
+      try {
+        const response = await fetch(`/api/decision-sessions/${sessionId}/swipe`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            participantName: "John Doe", // Replace with dynamic participant name
+            sessionItemId: restaurant.id,
+            vote: "LIKE",
+          }),
+        });
+
+        console.log("About to send request.");
+        const data = await response.json();
+        console.log("Response received:", data);
+        if (data.success) {
+          console.log(`New like count for ${restaurant.name}: ${data.newScore}`);
+          if(data.newScore >= 2) {
+            alert("Score has reached 2, automatically navigating to results.");
+            handleDone(); // If the score reaches 2, automatically navigate to results
+          }
+          if (data.message) {
+            // If the session has ended, navigate to the results page
+            alert(data.message);
+            router.push(`/session/${sessionId}/results`);
+          }
+        } else {
+          console.error(data.error);
+        }
+      } catch (error) {
+        console.error("Error sending LIKE vote:", error);
+      }
     if (forcedSwipe) setForcedSwipe(null);
   };
 

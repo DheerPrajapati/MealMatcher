@@ -3,8 +3,11 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// GET => Return items the participant hasn't voted on
+
+// GET => Return items the participant hasn't voted on, including the number of likes (score)
 // ?participantName=NAME
+const likeThreshold = 2;
+
 export async function GET(request, { params }) {
   const { sessionId } = params;
   const url = new URL(request.url);
@@ -23,22 +26,26 @@ export async function GET(request, { params }) {
       },
     },
   });
+
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   // 2) Filter out items the participant has already voted on
-  const remaining = session.sessionItems.filter((item) => {
-    // Has this item been voted on by participantName?
-    const alreadyVoted = item.votes.some(
-      (v) => v.participantName.toLowerCase() === participantName.toLowerCase()
-    );
-    return !alreadyVoted;
-  }).map((item) => ({
-    sessionItemId: item.id,
-    name: item.restaurant.name,
-    description: item.restaurant.description,
-  }));
+  const remaining = session.sessionItems
+    .filter((item) => {
+      // Has this item been voted on by participantName?
+      const alreadyVoted = item.votes.some(
+        (v) => v.participantName.toLowerCase() === participantName.toLowerCase()
+      );
+      return !alreadyVoted;
+    })
+    .map((item) => ({
+      sessionItemId: item.id,
+      name: item.restaurant.name,
+      description: item.restaurant.description,
+      likes: item.score, // Include the score (number of likes)
+    }));
 
   return NextResponse.json(remaining);
 }
@@ -69,8 +76,6 @@ export async function POST(request, { params }) {
   }
 
   // 2) Check if participantName already voted
-  // Because of the unique constraint, an attempt to create a second vote will fail
-  // but let's do a check for clarity
   const existingVote = await prisma.restaurantVote.findUnique({
     where: {
       sessionItemId_participantName: {
@@ -90,6 +95,14 @@ export async function POST(request, { params }) {
   let newScore = item.score;
   if (vote === "LIKE") {
     newScore += 1;
+    if(newScore >= likeThreshold) {
+      // If score reaches 2, mark the item as done for all participants
+      console.log("score has reached 2")
+      await prisma.decisionSessionParticipant.updateMany({
+        where: { sessionId: id },
+        data: { done: true },
+      });
+    }
   }
 
   // 4) Create the RestaurantVote + update sessionItem score
@@ -99,7 +112,6 @@ export async function POST(request, { params }) {
       vote,
       sessionItemId: item.id,
       restaurantId: item.restaurantId,
-      // userId could be optional if you have an actual user
     },
   });
 
@@ -108,5 +120,5 @@ export async function POST(request, { params }) {
     data: { score: newScore },
   });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, newScore });
 }
