@@ -29,23 +29,22 @@ export default function SessionPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [restaurantInput, setRestaurantInput] = useState({ name: "", description: "" });
 
-  // 1) On mount, read or prompt for user name
+  // On mount, read or prompt for user name
   useEffect(() => {
     if (!sessionId) return;
     const localKey = `session_user_${sessionId}`;
-    let user = sessionStorage.getItem(localKey);
-    if (!user) {
+    let userStr = sessionStorage.getItem(localKey);
+    if (!userStr) {
       const name = prompt("Enter your name to join this session:") || "Anonymous";
-      user = JSON.stringify({ name, done: false });
-      sessionStorage.setItem(localKey, user);
+      userStr = JSON.stringify({ name, done: false });
+      sessionStorage.setItem(localKey, userStr);
     }
-    setCurrentUser(JSON.parse(user));
+    setCurrentUser(JSON.parse(userStr));
   }, [sessionId]);
 
-  // 2) Load session, upsert participant if needed
+  // Load session, upsert participant if needed
   useEffect(() => {
     if (!sessionId || !currentUser) return;
-
     (async () => {
       let data = await fetchSessionFromDB(sessionId);
       if (!data || data.error) {
@@ -53,42 +52,32 @@ export default function SessionPage() {
         return;
       }
 
-      // Check if I'm already in participants
-      const alreadyParticipant = data.participants.some(
-        (p) => p.name === currentUser.name
-      );
-
-      // If not, add me
+      // If I'm not in participants, add me
+      const alreadyParticipant = data.participants.some((p) => p.name === currentUser.name);
       if (!alreadyParticipant) {
         const updated = await updateSessionOnDB(sessionId, {
-          participants: [
-            ...data.participants,
-            { name: currentUser.name, done: currentUser.done },
-          ],
+          participants: [...data.participants, { name: currentUser.name, done: currentUser.done }],
         });
         data = updated;
       }
 
-      // If the host set status to "SWIPING" already,
-      // navigate to the swipe page
+      // If status === "SWIPING", go to swipe page
       if (data.status === "SWIPING") {
         router.push(`/session/${sessionId}/swipe`);
       }
-
+      // If status === "COMPLETED", show results or waiting
       setSessionData(data);
     })();
   }, [sessionId, currentUser, router]);
 
-  // 3) Poll for updates every 3s => if status=SWIPING, redirect
+  // Poll for updates => if SWIPING, redirect; if COMPLETED, show results logic
   useEffect(() => {
     if (!sessionId) return;
     const interval = setInterval(async () => {
       const data = await fetchSessionFromDB(sessionId);
       if (data && !data.error) {
         setSessionData(data);
-
         if (data.status === "SWIPING") {
-          // Everyone sees that the session is now swiping
           router.push(`/session/${sessionId}/swipe`);
         }
       }
@@ -100,29 +89,25 @@ export default function SessionPage() {
     return <div className="p-6">Loading session...</div>;
   }
 
-  // Identify my participant info
-  const myParticipant = sessionData.participants.find(
-    (p) => p.name === currentUser?.name
-  );
+  const myParticipant = sessionData.participants.find((p) => p.name === currentUser?.name);
   const isHost = myParticipant?.isHost || false;
 
-  // Mark myself as done
+  // Everyone done adding restaurants
+  const allDoneAdding = sessionData.participants.every((p) => p.done);
+  // If the session status is COMPLETED => everyone is done swiping
+  const sessionCompleted = sessionData.status === "COMPLETED";
+
+  // Mark myself done adding restaurants
   const markAsDone = async () => {
     if (!currentUser) return;
     const updatedUser = { ...currentUser, done: true };
     setCurrentUser(updatedUser);
     sessionStorage.setItem(`session_user_${sessionId}`, JSON.stringify(updatedUser));
 
-    const updatedParticipants = sessionData.participants.map((p) => {
-      if (p.name === currentUser.name) {
-        return { ...p, done: true };
-      }
-      return p;
-    });
-
-    const updated = await updateSessionOnDB(sessionId, {
-      participants: updatedParticipants,
-    });
+    const updatedParticipants = sessionData.participants.map((p) =>
+      p.name === currentUser.name ? { ...p, done: true } : p
+    );
+    const updated = await updateSessionOnDB(sessionId, { participants: updatedParticipants });
     if (updated) setSessionData(updated);
   };
 
@@ -134,7 +119,7 @@ export default function SessionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          participantName: currentUser?.name, // needed for server validations
+          participantName: currentUser?.name,
           name: restaurantInput.name,
           description: restaurantInput.description,
         }),
@@ -145,12 +130,11 @@ export default function SessionPage() {
       }
       await res.json();
 
-      // Re-fetch the updated session
+      // Re-fetch session
       const updated = await fetchSessionFromDB(sessionId);
       if (updated && !updated.error) {
         setSessionData(updated);
       }
-      // Clear the input fields
       setRestaurantInput({ name: "", description: "" });
     } catch (error) {
       console.error(error);
@@ -158,23 +142,48 @@ export default function SessionPage() {
     }
   };
 
-  const allDone = sessionData.participants.every((p) => p.done);
+  // If all participants are done with adding restaurants, show "Show Results" if session status=COMPLETED
+  // or "Awaiting results" if not host
+  const renderResultsSection = () => {
+    if (sessionCompleted) {
+      // Everyone is done swiping as well
+      if (isHost) {
+        return (
+          <div className="mt-6">
+            <button
+              onClick={() => router.push(`/session/${sessionId}/results`)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Show Results
+            </button>
+          </div>
+        );
+      } else {
+        return (
+          <div className="mt-6 p-4 bg-yellow-100 text-yellow-800 rounded">
+            Awaiting results...
+          </div>
+        );
+      }
+    }
+    return null;
+  };
 
-  // Only the host can start swiping
+  // The host can only start swiping if all participants are done adding restaurants
   const startSwiping = async () => {
     if (!isHost) {
       alert("Only the host can start swiping!");
       return;
     }
-    // (Optional) update session status => "SWIPING"
-    const updated = await updateSessionOnDB(sessionId, {
-      status: "SWIPING",
-    });
+    if (!allDoneAdding) {
+      alert("Cannot start swiping until all participants mark themselves as done adding restaurants.");
+      return;
+    }
+    const updated = await updateSessionOnDB(sessionId, { status: "SWIPING" });
     if (!updated) {
       alert("Failed to set session to SWIPING");
       return;
     }
-    // For host, go immediately to swipe
     router.push(`/session/${sessionId}/swipe`);
   };
 
@@ -197,7 +206,7 @@ export default function SessionPage() {
         </ul>
       </div>
 
-      {/* Mark myself as done if I'm not done */}
+      {/* Mark myself as done (adding restaurants) */}
       {!myParticipant?.done && (
         <button
           onClick={markAsDone}
@@ -207,9 +216,9 @@ export default function SessionPage() {
         </button>
       )}
 
-      {allDone && <p className="mb-4 text-green-600">All participants are done!</p>}
+      {renderResultsSection()}
 
-      {/* Show session restaurants */}
+      {/* Session Restaurants */}
       <div className="mb-4 p-4 bg-white rounded shadow">
         <h2 className="text-xl font-semibold mb-2">Restaurants</h2>
         {sessionData.sessionItems?.length ? (
@@ -219,7 +228,9 @@ export default function SessionPage() {
               return (
                 <li key={item.id} className="mb-2">
                   <strong className="block text-lg">{name}</strong>
-                  <span className="text-gray-700">{description || "(no description)"}</span>
+                  <span className="text-gray-700">
+                    {description || "(no description)"}
+                  </span>
                 </li>
               );
             })}
@@ -257,8 +268,8 @@ export default function SessionPage() {
         </button>
       </div>
 
-      {/* If I'm the host, I can start swiping */}
-      {isHost && (
+      {/* Host-only: Start Swiping button */}
+      {isHost && !sessionCompleted && (
         <div className="mt-6">
           <button
             onClick={startSwiping}

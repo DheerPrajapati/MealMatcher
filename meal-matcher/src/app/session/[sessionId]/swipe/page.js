@@ -4,17 +4,21 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RestaurantCard from "@/app/Component/RestaurantCard";
 
-// Helper to fetch the items that the user hasn't swiped
+// Helper: Fetch swipe data for the given participant
 async function fetchSwipeData(sessionId, participantName) {
-  const res = await fetch(`/api/decision-sessions/${sessionId}/swipe?participantName=${encodeURIComponent(participantName)}`);
+  const res = await fetch(
+    `/api/decision-sessions/${sessionId}/swipe?participantName=${encodeURIComponent(
+      participantName
+    )}`
+  );
   if (!res.ok) {
     console.error("Failed to fetch swipe data");
     return [];
   }
-  return await res.json(); // array of { sessionItemId, name, description, ...}
+  return await res.json(); // Expected: array of items { sessionItemId, name, description, ... }
 }
 
-// Helper to record a swipe
+// Helper: Record a swipe (LIKE or DISLIKE) for one restaurant
 async function recordSwipe(sessionId, participantName, sessionItemId, vote) {
   const res = await fetch(`/api/decision-sessions/${sessionId}/swipe`, {
     method: "POST",
@@ -22,12 +26,15 @@ async function recordSwipe(sessionId, participantName, sessionItemId, vote) {
     body: JSON.stringify({
       participantName,
       sessionItemId,
-      vote, // "LIKE" or "DISLIKE"
+      vote, // Expected: "LIKE" or "DISLIKE"
     }),
   });
   if (!res.ok) {
-    console.error("Failed to record swipe");
+    const errData = await res.json();
+    console.error("Failed to record swipe:", errData.error);
+    throw new Error(errData.error || "Failed to record swipe");
   }
+  return await res.json();
 }
 
 export default function SwipePage() {
@@ -37,14 +44,14 @@ export default function SwipePage() {
   const [restaurants, setRestaurants] = useState([]);
   const [forcedSwipe, setForcedSwipe] = useState(null);
   const [participantName, setParticipantName] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false); // debounce flag
 
-  // On mount, we read the participant from sessionStorage or prompt
+  // On mount, load participantName from sessionStorage or prompt
   useEffect(() => {
     if (!sessionId) return;
     const localKey = `session_user_${sessionId}`;
     let userStr = sessionStorage.getItem(localKey);
     if (!userStr) {
-      // If somehow they're accessing /swipe directly, prompt?
       const name = prompt("Enter your participant name:") || "Anonymous";
       userStr = JSON.stringify({ name, done: false });
       sessionStorage.setItem(localKey, userStr);
@@ -53,25 +60,39 @@ export default function SwipePage() {
     setParticipantName(user.name);
   }, [sessionId]);
 
-  // Once we have participantName, load the items
+  // Once we have participantName, load the swipe items from the DB
   useEffect(() => {
     if (!sessionId || !participantName) return;
     (async () => {
-      const data = await fetchSwipeData(sessionId, participantName);
-      setRestaurants(data);
+      try {
+        const data = await fetchSwipeData(sessionId, participantName);
+        setRestaurants(data);
+      } catch (error) {
+        console.error(error);
+      }
     })();
   }, [sessionId, participantName]);
 
-  // Swiping logic
+  // Handle a swipe action with debounce
   const handleSwipe = async (direction, restaurant) => {
-    console.log(`Swiped ${direction} on ${restaurant.name}`);
-    // Remove from local deck
-    setRestaurants((prev) => prev.filter((r) => r.sessionItemId !== restaurant.sessionItemId));
-    // Record the swipe in DB
-    const vote = direction === "right" ? "LIKE" : "DISLIKE";
-    await recordSwipe(sessionId, participantName, restaurant.sessionItemId, vote);
-
-    if (forcedSwipe) setForcedSwipe(null);
+    if (isSwiping) return; // Prevent multiple simultaneous swipes
+    setIsSwiping(true);
+    try {
+      console.log(`Swiped ${direction} on ${restaurant.name}`);
+      // Remove the restaurant from the local deck
+      setRestaurants((prev) =>
+        prev.filter((r) => r.sessionItemId !== restaurant.sessionItemId)
+      );
+      // Determine vote value
+      const vote = direction === "right" ? "LIKE" : "DISLIKE";
+      // Record the swipe on the server (await ensures one at a time)
+      await recordSwipe(sessionId, participantName, restaurant.sessionItemId, vote);
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsSwiping(false);
+    }
   };
 
   const handleForceSwipe = (direction) => {
@@ -79,6 +100,7 @@ export default function SwipePage() {
       setForcedSwipe(direction);
     }
   };
+
 
   const handleDone = async () => {
     // Mark ourselves as done. We'll do a quick "PUT" to the session to set done = true
@@ -136,17 +158,20 @@ export default function SwipePage() {
       <div className="mt-6 flex justify-center gap-8">
         <button
           onClick={() => handleForceSwipe("left")}
-          className="flex h-12 w-12 items-center justify-center rounded-full 
-            bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600 focus:outline-none"
+          disabled={isSwiping}
+          className={`flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600 focus:outline-none ${
+            isSwiping ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
           ✕
         </button>
         <button
           onClick={() => handleForceSwipe("right")}
-          className="flex h-12 w-12 items-center justify-center rounded-full 
-            bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600 focus:outline-none"
+          disabled={isSwiping}
+          className={`flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600 focus:outline-none ${
+            isSwiping ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
-          {/* Check mark icon */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6"

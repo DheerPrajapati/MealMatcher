@@ -16,6 +16,7 @@ export async function GET(request, { params }) {
       sessionItems: {
         include: {
           restaurant: true, 
+          votes: true,
         },
       },
     },
@@ -26,6 +27,25 @@ export async function GET(request, { params }) {
   }
   return NextResponse.json(session);
 }
+
+// DELETE => Clear the entire session from the database
+export async function DELETE(request, { params }) {
+    const { sessionId } = params;
+    const id = parseInt(sessionId, 10);
+  
+    try {
+      // Delete the session; thanks to onDelete: Cascade on your relations,
+      // all related participants, sessionItems, and votes will be removed.
+      const deletedSession = await prisma.decisionSession.delete({
+        where: { id },
+      });
+      return NextResponse.json({ success: true, deletedSession });
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+  
 
 // PUT => Update session: upsert participants (with duplicates check), update status, etc.
 export async function PUT(request, { params }) {
