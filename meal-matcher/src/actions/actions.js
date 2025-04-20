@@ -1,9 +1,11 @@
 "use server"
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation"; // ✅ this line is missing
 
 
 export default async function registerUser(formData) {
+    console.log("Registering the user")
     try {
         const firstName = formData.get("first_name");
         const lastName = formData.get("last_name");
@@ -26,8 +28,12 @@ export default async function registerUser(formData) {
             },
         });
 
-        return user;
+        redirect("/");
+        // return user;
     } catch (error) {
+        if (error?.digest?.includes("NEXT_REDIRECT")) {
+            throw error; // Let Next.js handle the redirect
+        }
         console.error("error with creating user:", error);
         throw new Error("registration failed(user)");
     }
