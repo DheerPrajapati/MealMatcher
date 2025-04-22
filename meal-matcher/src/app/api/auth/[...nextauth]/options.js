@@ -50,4 +50,9 @@ export const options = {
         })
     ], 
     secret: process.env.NEXTAUTH_SECRET, 
+    callbacks: {
+        async redirect({ url, baseUrl }) {
+          return "/swipe"; // ✅ always redirect here after login
+        },
+      },
 }
