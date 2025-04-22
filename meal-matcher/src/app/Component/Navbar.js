@@ -10,12 +10,10 @@ export default function Navbar() {
       <div className="flex items-center space-x-2">
         {/* <Image src="/loom-logo.svg" alt="Loom Logo" width={30} height={30} /> */}
         <span className="font-semibold text-lg text-gray-900">
-          <span className="text-black">Meal</span>{" "}
-          <span className="text-gray-700">Matcher</span>
+          <span className="text-[#008B84]">Meal</span>{" "}
+          <span className="text-[#008B84]">Matcher</span>
         </span>
       </div>
-
-      {/* Nav Actions */}
       <div className="flex items-center space-x-4">
         <button
           onClick={() => signIn()}
@@ -28,14 +26,6 @@ export default function Navbar() {
             Create an Account For Free
           </button>
         </Link>
-        <Link href="/contact">
-          <button className="bg-[#EDEBFF] text-[#635BFF] font-medium px-4 py-2 rounded-full cursor-pointer duration-300 hover:opacity-30 hover:scale-90 hover:bg-[#dcd8ff]">
-            Contact Us
-          </button>
-        </Link>
-        <button className="p-2 rounded-full hover:bg-gray-100">
-          {/* <Menu size={24} /> */}
-        </button>
       </div>
     </nav>
   );

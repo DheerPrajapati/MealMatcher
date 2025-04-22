@@ -41,7 +41,7 @@ export default function RestaurantCard({ restaurant, onSwipe, style, forceSwipe 
 
   return (
     <div
-      className="absolute w-full max-w-sm bg-white rounded-md shadow-lg overflow-hidden"
+      className="absolute w-full max-w-xl bg-white rounded-md shadow-lg overflow-hidden"
       style={{
         ...style,
         transform: `translate(${translate.x}px, ${translate.y}px) rotate(${translate.x / 10}deg)`,
@@ -58,8 +58,16 @@ export default function RestaurantCard({ restaurant, onSwipe, style, forceSwipe 
         className="w-full h-48 object-cover"
       />
       <div className="p-4">
-        <h3 className="text-xl font-bold">{restaurant.name}</h3>
+        <div>
+        <h3 className="inline text-xl font-bold">{restaurant.name}&nbsp;</h3>
+        <p className="inline text-gray-600">{restaurant.price_lvl}</p>
+        </div>
         <p className="text-gray-600">{restaurant.description}</p>
+        <div>
+        <p className="inline text-gray-600">Rating: {restaurant.rating}⭐</p>
+        <p className="inline text-gray-600">({restaurant.user_total_rating})</p>
+        </div>
+        <p className={restaurant.isOpen ? "text-green-600" : "text-red-600"}>{restaurant.isOpen === null ? "No hours available" : restaurant.isOpen ? "Open now" : "Currently Closed"}</p>     
       </div>
     </div>
   );
