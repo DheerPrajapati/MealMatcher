@@ -26,14 +26,6 @@ export default function Navbar() {
             Create an Account For Free
           </button>
         </Link>
-        <Link href="/contact">
-          <button className="bg-[#EDEBFF] text-[#635BFF] font-medium px-4 py-2 rounded-full cursor-pointer duration-300 hover:opacity-30 hover:scale-90 hover:bg-[#dcd8ff]">
-            Contact Us
-          </button>
-        </Link>
-        <button className="p-2 rounded-full hover:bg-gray-100">
-          {/* <Menu size={24} /> */}
-        </button>
       </div>
     </nav>
   );

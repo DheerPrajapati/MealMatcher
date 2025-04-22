@@ -10,8 +10,8 @@ export default function Navbar_signedin() {
         {/* <Image src="/loom-logo.svg" alt="Loom Logo" width={30} height={30} /> */}
         <Link href={"/"}>
           <span className="font-semibold text-lg text-gray-900">
-            <span className="text-{#008B84}">Meal</span>{" "}
-            <span className="text-{#008B84}">Matcher</span>
+            <span className="text-[#008B84]">Meal</span>{" "}
+            <span className="text-[#008B84]">Matcher</span>
           </span>
         </Link>
       </div>
@@ -23,9 +23,9 @@ export default function Navbar_signedin() {
             Groups
           </button>
         </Link>
-        <Link href="/profile">
+        <Link href="/">
           <button className="bg-[#EDEBFF] text-[#635BFF] font-medium px-4 py-2 rounded-full cursor-pointer duration-300 hover:opacity-30 hover:scale-90 hover:bg-[#dcd8ff]">
-            Profile
+            Logout
           </button>
         </Link>
         <button className="p-2 rounded-full hover:bg-gray-100">
