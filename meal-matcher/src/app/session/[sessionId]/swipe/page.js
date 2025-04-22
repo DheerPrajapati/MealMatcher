@@ -19,7 +19,8 @@ async function fetchSwipeData(sessionId, participantName) {
 }
 
 // Helper: Record a swipe (LIKE or DISLIKE) for one restaurant
-async function recordSwipe(sessionId, participantName, sessionItemId, vote) {
+export async function recordSwipe(sessionId, participantName, sessionItemId, vote) {
+  console.log("Recording swipe:");
   const res = await fetch(`/api/decision-sessions/${sessionId}/swipe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -71,6 +72,29 @@ export default function SwipePage() {
         console.error(error);
       }
     })();
+  }, [sessionId, participantName]);
+
+  useEffect(() => {
+    if (!sessionId || !participantName) return;
+  
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/decision-sessions/${sessionId}");
+        if (!res.ok) return;
+        const session = await res.json();
+        const me = session.participants.find(
+          (p) => p.name.toLowerCase() === participantName.toLowerCase()
+        );
+        if (me?.done) {
+          console.log("Session is done for this participant");
+          handleDone();
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 2000); // every 2 seconds
+  
+    return () => clearInterval(interval);
   }, [sessionId, participantName]);
 
   // Handle a swipe action with debounce

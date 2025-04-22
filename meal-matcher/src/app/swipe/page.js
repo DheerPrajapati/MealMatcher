@@ -3,11 +3,13 @@ import Navbar_signedin from "../Component/Navbar_signedin";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import RestaurantCard from "@/app/Component/RestaurantCard";
+// import { NextResponse } from "next/server";
+// import { prisma } from "@/lib/prisma";
+import {recordSwipe} from "@/app/session/[sessionId]/swipe/page.js";
 
 export default function SwipePage() {
   const router = useRouter();
 
-  // For demonstration, we assume the session ID was set on session creation
   let sessionId = "demo123";
   if (typeof window !== "undefined") {
     const stored = localStorage.getItem("sessionId");
@@ -15,20 +17,16 @@ export default function SwipePage() {
   }
 
   const [restaurants, setRestaurants] = useState([]);
-  const [swiped, setSwiped] = useState([]); // Store swipe decisions of the current user
+  const [swiped, setSwiped] = useState([]);
   const [forcedSwipe, setForcedSwipe] = useState(null);
 
   useEffect(() => {
-    if (navigator.geolocation == false) {
-      return;
-    }
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async (position) => {
       const { latitude, longitude } = position.coords;
       try {
         const res = await fetch(`/api/places?lat=${latitude}&lng=${longitude}`);
         const data = await res.json();
-
-        console.log(data.results);
 
         const formatted_names = data.results.map((place) => ({
           id: place.place_id,
@@ -37,13 +35,13 @@ export default function SwipePage() {
           rating: place.rating || "No Rating",
           open: place.open_now,
           price_lvl:
-            place.price_level == 1
+            place.price_level === 1
               ? "$"
-              : place.price_level == 2
+              : place.price_level === 2
               ? "$$"
-              : place.price_level == 3
+              : place.price_level === 3
               ? "$$$"
-              : place.price_level == 4
+              : place.price_level === 4
               ? "$$$$"
               : "N/A",
           isOpen: place.opening_hours?.open_now ?? null,
@@ -55,54 +53,38 @@ export default function SwipePage() {
 
         setRestaurants(formatted_names);
       } catch (err) {
-        console.log("Error formatting api data");
+        console.log("Error formatting API data:", err);
       }
     });
   }, []);
 
   const handleSwipe = async (direction, restaurant) => {
-    console.log(`Swiped ${direction} on ${restaurant.name}`);
-    // Remove the swiped restaurant from the list
-    setRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));
-    // Record the swipe decision for the current user
-    setSwiped((prev) => [...prev, { ...restaurant, direction }]);
-
-      // Send a "LIKE" vote to the backend
-      console.log("The direction is right");
-      try {
-        const response = await fetch(`/api/decision-sessions/${sessionId}/swipe`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            participantName: "John Doe", // Replace with dynamic participant name
-            sessionItemId: restaurant.id,
-            vote: "LIKE",
-          }),
-        });
-
-        console.log("About to send request.");
-        const data = await response.json();
-        console.log("Response received:", data);
-        if (data.success) {
-          console.log(`New like count for ${restaurant.name}: ${data.newScore}`);
-          if(data.newScore >= 2) {
-            alert("Score has reached 2, automatically navigating to results.");
-            handleDone(); // If the score reaches 2, automatically navigate to results
-          }
-          if (data.message) {
-            // If the session has ended, navigate to the results page
-            alert(data.message);
-            router.push(`/session/${sessionId}/results`);
-          }
-        } else {
-          console.error(data.error);
-        }
-      } catch (error) {
-        console.error("Error sending LIKE vote:", error);
+    if (isSwiping) return;
+    setIsSwiping(true);
+    try {
+      console.log("Swiped ${direction} on ${restaurant.name}");
+      setRestaurants((prev) =>
+        prev.filter((r) => r.sessionItemId !== restaurant.sessionItemId)
+      );
+  
+      const vote = direction === "right" ? "LIKE" : "DISLIKE";
+      
+      console.log("Before the recordSwipe call");
+      // Use the updated API response which now returns { done: true } if session is finished
+      const result = await recordSwipe(sessionId, participantName, restaurant.sessionItemId, vote);
+      console.log("Swipe recorded: ", result.done)
+      if (result.done) {
+        // Redirect to results if the session is marked as done
+        console.log("Before handleDone call and result.done is true")
+        handleDone();
       }
-    if (forcedSwipe) setForcedSwipe(null);
+  
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsSwiping(false);
+    }
   };
 
   const handleForceSwipe = (direction) => {
@@ -111,14 +93,10 @@ export default function SwipePage() {
     }
   };
 
-  // When the user clicks "Done", store their swipe results for the session and navigate to the results page.
   const handleDone = () => {
-    // Retrieve any existing results for this session
     const key = `swipeResults_${sessionId}`;
     const existingResults = JSON.parse(localStorage.getItem(key)) || [];
-    // For demo, we simply append the current user's swiped results to the session data.
     localStorage.setItem(key, JSON.stringify([...existingResults, swiped]));
-    // Navigate to the results page
     router.push(`/session/${sessionId}/results`);
   };
 
@@ -126,9 +104,7 @@ export default function SwipePage() {
     <>
       <Navbar_signedin />
       <div className="relative flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
-        <h1 className="mb-4 text-3xl font-bold text-gray-800">
-          Swipe Restaurants
-        </h1>
+        <h1 className="mb-4 text-3xl font-bold text-gray-800">Swipe Restaurants</h1>
 
         <div className="relative w-full max-w-sm h-96">
           {restaurants.map((restaurant, index) => (
@@ -142,44 +118,28 @@ export default function SwipePage() {
           ))}
           {restaurants.length === 0 && (
             <div className="flex h-full items-center justify-center">
-              <p className="text-xl text-gray-700">
-                No more restaurants to swipe.
-              </p>
+              <p className="text-xl text-gray-700">No more restaurants to swipe.</p>
             </div>
           )}
         </div>
 
-        {/* Action buttons for swipe */}
         <div className="mt-6 flex justify-center gap-8">
           <button
             onClick={() => handleForceSwipe("left")}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600 focus:outline-none"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white text-2xl shadow-lg hover:bg-red-600"
           >
             ✕
           </button>
           <button
             onClick={() => handleForceSwipe("right")}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600 focus:outline-none"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white text-2xl shadow-lg hover:bg-green-600"
           >
-            {/* Check mark SVG */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M5 13l4 4L19 7"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </button>
         </div>
 
-        {/* "Done" button to finish swiping */}
         <div className="mt-6">
           <button
             onClick={handleDone}
