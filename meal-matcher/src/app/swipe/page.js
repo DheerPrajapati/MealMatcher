@@ -60,7 +60,7 @@ export default function SwipePage() {
     });
   }, []);
 
-  const handleSwipe = (direction, restaurant) => {
+  const handleSwipe = async (direction, restaurant) => {
     console.log(`Swiped ${direction} on ${restaurant.name}`);
     // Remove the swiped restaurant from the list
     setRestaurants((prev) => prev.filter((r) => r.id !== restaurant.id));

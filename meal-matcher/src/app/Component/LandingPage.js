@@ -29,7 +29,7 @@ const LandingPage = () => {
           height={0}
         ></Image>
         <Link
-          href="/swipe"
+          href="/session" //this will take you to creating a seession page.
           className="text-[#635BFF] text-lg font-medium hover:opacity-80 transition"
         >
           Start Now
