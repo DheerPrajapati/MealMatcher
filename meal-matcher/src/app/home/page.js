@@ -1,5 +1,7 @@
+'use client'
 import React from "react";
 import Navbar_signedin from "../Component/Navbar_signedin";
+import { useRouter } from "next/navigation";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,6 +12,28 @@ const inter = Inter({
 });
 
 const LandingPage = () => {
+
+  const router = useRouter();
+
+  const createSession = async () => {
+    try {
+      const response = await fetch("/api/decision-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "My New Session", // Optional
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create session");
+
+      const newSession = await response.json();
+      router.push(`/session/${newSession.id}`);
+    } catch (error) {
+      console.error("Error creating session:", error);
+      alert("Failed to create session");
+    }
+  };
+
   return (
     <div className={inter.className}>
       <Navbar_signedin />
@@ -22,7 +46,7 @@ const LandingPage = () => {
         </p>
         <div className="flex justify-center items-center space-x-4 pt-4">
           <Link href={'/session'}>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded transform motion-safe:hover:scale-110">
+            <button onClick={createSession} className="px-4 py-2 bg-blue-500 text-white rounded transform motion-safe:hover:scale-110">
                 Create a group
             </button>
           </Link>

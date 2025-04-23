@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import Navbar_signedin from "../Component/Navbar_signedin";
+import Footer from "../Component/footer";
 
 export default function SessionHome() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function SessionHome() {
         Create Session
       </button>
     </div>
+    <Footer />
     </>
   );
 }

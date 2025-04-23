@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar_signedin from "../Component/Navbar_signedin";
+import Footer from "../Component/footer";
 
 export default function JoinSessionPage() {
   const [sessionId, setSessionId] = useState("");
@@ -72,6 +73,7 @@ export default function JoinSessionPage() {
         </button>
       </form>
     </div>
+        <Footer />
     </>
   );
 }

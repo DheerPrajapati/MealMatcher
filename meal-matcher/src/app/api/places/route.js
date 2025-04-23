@@ -1,3 +1,5 @@
+// app/api/places/page.js
+
 import { NextResponse } from 'next/server';
 
 
