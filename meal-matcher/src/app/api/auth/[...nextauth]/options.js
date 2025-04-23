@@ -10,7 +10,6 @@ console.log("GITHUB_ID:", process.env.GITHUB_ID);
 console.log("GITHUB_SECRET:", process.env.GITHUB_SECRET);
 
 export const options = { 
-
     session:{
         strategy: "jwt",
     },
@@ -30,7 +29,7 @@ export const options = {
                 }, 
                 password: {
                     label: "Password", 
-                    type: "text", 
+                    type: "password", 
                     placeholder: "Enter Password"
                 }
             }, 
@@ -57,7 +56,9 @@ export const options = {
     secret: process.env.NEXTAUTH_SECRET, 
     callbacks: {
         async redirect({ url, baseUrl }) {
-          return "/swipe";
+          return "/home";
         },
       },
+
+
 }
