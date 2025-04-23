@@ -118,7 +118,7 @@ export default function SwipePage() {
         }
         return p;
       });
-
+      
       // Update session
       await fetch(`/api/decision-sessions/${sessionId}`, {
         method: "PUT",

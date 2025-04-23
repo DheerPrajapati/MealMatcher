@@ -169,6 +169,8 @@ export default function SessionPage() {
     return null;
   };
 
+
+
   // The host can only start swiping if all participants are done adding restaurants
   const startSwiping = async () => {
     if (!isHost) {
@@ -186,6 +188,7 @@ export default function SessionPage() {
     }
     router.push(`/session/${sessionId}/swipe`);
   };
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -280,5 +283,6 @@ export default function SessionPage() {
         </div>
       )}
     </div>
+  
   );
 }

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import Navbar_signedin from "../Component/Navbar_signedin";
 
 export default function SessionHome() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function SessionHome() {
   };
 
   return (
+    <>
+    <Navbar_signedin />
     <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center justify-center">
       <h1 className="mb-6 text-3xl font-bold text-gray-800">Create a New Session</h1>
       <button
@@ -39,5 +42,6 @@ export default function SessionHome() {
         Create Session
       </button>
     </div>
+    </>
   );
 }

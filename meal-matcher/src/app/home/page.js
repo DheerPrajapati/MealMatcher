@@ -15,7 +15,7 @@ const LandingPage = () => {
       <Navbar_signedin />
       <div className="w-full mt-20 px-4 flex flex-col items-center text-center h-200">
         <h1 className="text-4xl md:text-5xl pt-30 font-extrabold text-black max-w-3xl leading-tight">
-         Hello, Guest
+         Lets get swiping!
         </h1>
         <p className="text-lg text-gray-600 mt-4 max-w-xl">
           Start by creating a group or joining one
@@ -26,7 +26,7 @@ const LandingPage = () => {
                 Create a group
             </button>
           </Link>
-          <Link href={'/session'}>
+          <Link href={'/Join'}>
             <button className="px-4 py-2 bg-green-500 text-white rounded transform motion-safe:hover:scale-110">
                 Join group
             </button>
