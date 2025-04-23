@@ -9,51 +9,32 @@ const inter = Inter({
   weight: ["400", "700", "800"],
 });
 
-const Home = () => {
+const LandingPage = () => {
   return (
     <div className={inter.className}>
       <Navbar_signedin />
-      <div className="w-full mt-20 px-4 flex flex-col  text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-black max-w-3xl leading-tight text-left">
-          Hello Insert Name
+      <div className="w-full mt-20 px-4 flex flex-col items-center text-center h-200">
+        <h1 className="text-4xl md:text-5xl pt-30 font-extrabold text-black max-w-3xl leading-tight">
+         Hello, Guest
         </h1>
-        <p className="text-lg text-gray-600 mt-4 max-w-xl text-left">
-          Start by creating a group or joining an existing one
+        <p className="text-lg text-gray-600 mt-4 max-w-xl">
+          Start by creating a group or joining one
         </p>
-      </div>
-
-      <div className="bg-[#2596be] h-100 w-full">
-        <div className=" mt-24 px-6 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-20 pt-27 text-center">
-          <div className="border-solid border-4 border-[#008B84] rounded-lg p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Swipe to Vote
-            </h2>
-            <p className="text-[#A8D9ED] text-sm">
-              Swipe right or left. Let the group decide what's next for dinner.
-            </p>
-          </div>
-
-          <div className="border-solid border-4 border-[#008B84] rounded-lg p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Smart Matching
-            </h2>
-            <p className="text-[#A8D9ED] text-sm">
-              We handle the group logic so you don’t have to argue about where
-              to eat.
-            </p>
-          </div>
-
-          <div className="border-solid border-4 border-[#008B84] rounded-lg p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Nearby & Relevant
-            </h2>
-            <p className="text-[#A8D9ED] text-sm">
-              Powered by your location. Discover restaurants that actually make
-              sense.
-            </p>
-          </div>
+        <div className="flex justify-center items-center space-x-4 pt-4">
+          <Link href={'/session'}>
+            <button className="px-4 py-2 bg-blue-500 text-white rounded transform motion-safe:hover:scale-110">
+                Create a group
+            </button>
+          </Link>
+          <Link href={'/session'}>
+            <button className="px-4 py-2 bg-green-500 text-white rounded transform motion-safe:hover:scale-110">
+                Join group
+            </button>
+          </Link>
         </div>
       </div>
+
+      
 
       <div className="bg-gray-800 h-75">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-90 pt-25 text-center">
@@ -83,4 +64,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default LandingPage;
