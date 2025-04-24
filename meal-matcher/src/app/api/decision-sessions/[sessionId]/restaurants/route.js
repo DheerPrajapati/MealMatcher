@@ -5,12 +5,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 // POST => Add a new Restaurant + SessionItem, with validations
-export async function POST(request, { params }) {
+export async function POST(request, context) {
+  console.log("Restaurants POST - Starting request");
   try {
-    const { sessionId } = params;
+    const params = await context.params;
+    const sessionId = params.sessionId;
     const id = parseInt(sessionId, 10);
 
-    // Expect body = { name, description, participantName }
+    // Expect body = { name, description, participantName, googlePlaceId, ... }
     const body = await request.json();
 
     // 1) Verify the session exists, including sessionItems & participants
@@ -26,7 +28,6 @@ export async function POST(request, { params }) {
     }
 
     // 2) Identify the participant
-    // Assume your front end passes participantName to identify who is adding the restaurant
     const participantName = body.participantName || "";
     const participant = session.participants.find(
       (p) => p.name.toLowerCase() === participantName.toLowerCase()
@@ -38,54 +39,70 @@ export async function POST(request, { params }) {
       );
     }
 
-    // 3) If participant is done, block
+    
     if (participant.done) {
-      return NextResponse.json(
-        { error: "Cannot add restaurants after you're done." },
-        { status: 400 }
-      );
+      await prisma.decisionSessionParticipant.update({
+        where: { id: participant.id },
+        data: { done: false },
+      });
     }
 
-    // 4) Check for a duplicate restaurant in this session (by name + description)
-    const nameLC = body.name.toLowerCase().trim();
-    const descLC = (body.description || "").toLowerCase().trim();
-    const duplicate = session.sessionItems.some((item) => {
+    // 4) Check if this restaurant is already in this session
+    const existingSessionItem = session.sessionItems.find((item) => {
       const r = item.restaurant;
       return (
-        r.name.toLowerCase().trim() === nameLC &&
-        (r.description || "").toLowerCase().trim() === descLC
+        (body.googlePlaceId && r.googlePlaceId === body.googlePlaceId) ||
+        (r.name.toLowerCase().trim() === body.name.toLowerCase().trim() &&
+          (r.description || "").toLowerCase().trim() === (body.description || "").toLowerCase().trim())
       );
     });
-    if (duplicate) {
-      return NextResponse.json(
-        { error: `Restaurant "${body.name}" already exists in this session.` },
-        { status: 400 }
-      );
+
+    if (existingSessionItem) {
+      return NextResponse.json({
+        restaurant: existingSessionItem.restaurant,
+        sessionItem: existingSessionItem,
+      });
     }
 
-    // 5) Create the Restaurant
-    const newRestaurant = await prisma.restaurant.create({
-      data: {
-        name: body.name,
-        description: body.description || null,
-      },
-    });
+    // 5) Check if restaurant exists in database (by googlePlaceId)
+    let restaurant;
+    if (body.googlePlaceId) {
+      restaurant = await prisma.restaurant.findUnique({
+        where: { googlePlaceId: body.googlePlaceId },
+      });
+    }
 
-    // 6) Create the SessionItem
+    // 6) If restaurant doesn't exist, create it
+    if (!restaurant) {
+      restaurant = await prisma.restaurant.create({
+        data: {
+          name: body.name,
+          description: body.description || null,
+          googlePlaceId: body.googlePlaceId || null,
+          rating: body.rating || null,
+          priceLevel: body.priceLevel || null,
+          isOpen: body.isOpen,
+          userTotalRating: body.userTotalRating || null,
+          types: body.types || null
+        },
+      });
+    }
+
+    // 7) Create the SessionItem
     const newSessionItem = await prisma.sessionItem.create({
       data: {
         sessionId: id,
-        restaurantId: newRestaurant.id,
+        restaurantId: restaurant.id,
       },
     });
 
     // Return the newly created row(s)
     return NextResponse.json({
-      restaurant: newRestaurant,
+      restaurant,
       sessionItem: newSessionItem,
     });
   } catch (error) {
-    console.error("Error adding restaurant to session:", error);
+    console.error("Restaurants POST - Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

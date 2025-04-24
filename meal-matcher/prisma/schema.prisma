@@ -48,6 +48,12 @@ model Restaurant {
   id           Int              @id @default(autoincrement())
   name         String
   description  String?
+  googlePlaceId String?         @unique
+  rating       Float?
+  priceLevel   Int?
+  isOpen       Boolean?
+  userTotalRating Int?
+  types        String?
 
   // SessionItems referencing this Restaurant
   sessionItems SessionItem[]
