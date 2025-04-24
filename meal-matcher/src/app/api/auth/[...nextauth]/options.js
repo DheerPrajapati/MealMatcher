@@ -30,7 +30,7 @@ export const options = {
                 }, 
                 password: {
                     label: "Password", 
-                    type: "text", 
+                    type: "password", 
                     placeholder: "Enter Password"
                 }
             }, 
@@ -57,7 +57,7 @@ export const options = {
     secret: process.env.NEXTAUTH_SECRET, 
     callbacks: {
         async redirect({ url, baseUrl }) {
-          return "/swipe";
+          return "/home"; //always redirect here after login
         },
       },
 }
