@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Navbar_signedin from "@/app/Component/Navbar_signedin";
 
 export default function SessionResultsPage() {
   const { sessionId } = useParams();
@@ -52,7 +53,7 @@ export default function SessionResultsPage() {
       if (!res.ok) {
         throw new Error("Failed to delete session");
       }
-      router.push(`/session`);
+      router.push(`/home`);
     } catch (error) {
       console.error("Error deleting session:", error);
       alert("Error clearing session");
@@ -60,6 +61,8 @@ export default function SessionResultsPage() {
   };
 
   return (
+    <>
+    <Navbar_signedin/>
     <div className="min-h-screen bg-gray-100 p-6">
       <h1 className="text-3xl font-bold mb-4">Results for Session {sessionId}</h1>
       <div className="overflow-x-auto">
@@ -94,8 +97,9 @@ export default function SessionResultsPage() {
         onClick={handleBackToSessions}
         className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
       >
-        Back to Sessions
+        Back to Home
       </button>
     </div>
+    </>
   );
 }
